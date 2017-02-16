@@ -27,7 +27,7 @@ function view(
 ): AwesomeReactClass {
   // hmr restore
   if (module && module.hot) {
-    cache[module.id] = getCached(module, provided))
+    cache[module.id] = getCached(module, provided)
   }
 
   class ProxyComponent {
@@ -49,7 +49,7 @@ function view(
       this.stores = getStores(this, provided, {
         hmr: { module, cache },
         onStore: store => persistStore(key, store)
-      )
+      })
       for (const { key, store } of this.stores) {
         // attach store directly to instance
         if (this[key]) {

@@ -1,4 +1,6 @@
-export declare class AwesomeReactClass extends React.Component {
+import React from 'react'
+
+export type AwesomeReactClass = React.Component & {
   subscriptions: CompositeDisposable;
   stores: Set<Object>;
   props: Object;

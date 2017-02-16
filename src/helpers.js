@@ -1,5 +1,5 @@
 import { create } from 'mobx-persist'
-import type { Store } from './types'
+// import type { Store } from './types'
 
 export function getCached(module, provided): Object<string, Store> {
   const { stores } = module.hot.data
