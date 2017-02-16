@@ -9,6 +9,7 @@ import gloss from 'gloss'
 import developmentDecorate from './devDecorate'
 import type { AwesomeReactClass, Store } from './types'
 import { StoreCache } from 'motion-hmr'
+import { persistStore } from './helpers'
 
 export const val = observable
 export * from 'mobx'
@@ -23,7 +24,8 @@ const injections = {}
 function view(
   component: ReactClass<{}>,
   provided: ?Object = null,
-  module?: Object, plain?: boolean
+  module?: Object,
+  plain?: boolean
 ): AwesomeReactClass {
   // hmr restore
   if (module && module.hot) {
@@ -63,9 +65,13 @@ function view(
           this.app.stores[key] = store
         }
       }
-      // dispose stores
+      // add dispose subscription
       this.subscriptions.add(() => {
-        this.stores.forEach(({ store }) => store.dispose())
+        this.stores.forEach(({ store }) => {
+          if (store.dispose) {
+            store.dispose()
+          }
+        })
       })
     }
 
