@@ -8,14 +8,14 @@ import { baseStyles } from 'macro-theme'
 import gloss from 'gloss'
 import developmentDecorate from './devDecorate'
 import type { AwesomeReactClass, Store } from './types'
-import { getCached, getStores, persistStore } from './helpers'
+import { StoreCache } from 'motion-hmr'
 
 export const val = observable
 export * from 'mobx'
 
 const styled = gloss({ baseStyles })
 // for store hmr
-const cache = {}
+const Cache = new StoreCache()
 // for dependency injection
 const injections = {}
 
@@ -27,7 +27,7 @@ function view(
 ): AwesomeReactClass {
   // hmr restore
   if (module && module.hot) {
-    cache[module.id] = getCached(module, provided)
+    Cache.update(module, provided)
   }
 
   class ProxyComponent {
@@ -46,10 +46,12 @@ function view(
     attachStores(provided: Object<string, Store>) {
       const { storeKey } = this.props
       const key = storeKey ? `${component.name}${storeKey}` : null
-      this.stores = getStores(this, provided, {
-        hmr: { module, cache },
-        onStore: store => persistStore(key, store)
-      })
+      this.stores = Cache.restore(
+        this,
+        provided,
+        module,
+        store => persistStore(key, store)
+      )
       for (const { key, store } of this.stores) {
         // attach store directly to instance
         if (this[key]) {
