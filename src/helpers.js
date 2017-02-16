@@ -1,3 +1,4 @@
+import { create } from 'mobx-persist'
 import type { Store } from './types'
 
 export function getCached(module, provided): Object<string, Store> {
@@ -63,4 +64,10 @@ export function getStores(instance, provided, { hmr, onStore = idFn } = {}) {
     const store = previousStores[key] || onStore(new storeNames[key](instance.props))
     return { key, store }
   })
+}
+
+const decoratePersist = create({})
+
+export function persistStore(key, store) {
+  return key ? decoratePersist(key, store) : store
 }

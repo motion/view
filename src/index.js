@@ -6,58 +6,60 @@ import mobxClassHelpers from 'mobx-class-helpers'
 import React from 'react'
 import { baseStyles } from 'macro-theme'
 import gloss from 'gloss'
-import { create } from 'mobx-persist'
 import developmentDecorate from './devDecorate'
-import type AwesomeReactClass from './types'
-import { getCached, getStores } from './helpers'
+import type { AwesomeReactClass, Store } from './types'
+import { getCached, getStores, persistStore } from './helpers'
 
 export const val = observable
 export * from 'mobx'
 
-const persistStore = create({})
 const styled = gloss({ baseStyles })
+// for store hmr
 const cache = {}
+// for dependency injection
 const injections = {}
 
-function view(component: ReactClass<{}>, providedStores: ?Object = null, module?: Object, plain?: boolean): AwesomeReactClass {
+// @view decorator
+function view(
+  component: ReactClass<{}>,
+  provided: ?Object = null,
+  module?: Object, plain?: boolean
+): AwesomeReactClass {
   // hmr restore
   if (module && module.hot) {
-    cache[module.id] = getCached(module, providedStores))
+    cache[module.id] = getCached(module, provided))
   }
 
   class ProxyComponent {
     constructor() {
       this.subscriptions = new CompositeDisposable()
-
       // inherit from React.Component
       React.Component.apply(this, arguments)
       component.apply(this, arguments)
-
-      if (providedStores) {
-        this.attachStores()
+      // stores
+      if (provided) {
+        this.attachStores(provided)
       }
     }
 
-    attachStores() {
-      const stores = getStores(this, providedStores, {
+    // attaches stores provided to this instance
+    attachStores(provided: Object<string, Store>) {
+      const { storeKey } = this.props
+      const key = storeKey ? `${component.name}${storeKey}` : null
+      this.stores = getStores(this, provided, {
         hmr: { module, cache },
-        onStore: store => {
-          if (this.props.storeKey) {
-            // add mobx-persist
-            const storeKey = `${component.name}${this.props.storeKey}`
-            store = persistStore(storeKey, store)
-          }
-          return store
-        }
+        onStore: store => persistStore(key, store)
       )
-      this.stores = new Set()
-      for (const [key, store] of stores) {
-        if (instance[key]) {
-          throw new Error(`Cannot set store to ${key}, component already has that defined: ${instance[key]}`)
+      for (const { key, store } of this.stores) {
+        // attach store directly to instance
+        if (this[key]) {
+          throw new Error(`Cannot set store to ${key}, component already has that defined: ${this[key]}`)
         }
         this[key] = store
-        this.stores.add({ key, store })
-        this.app.stores[key] = store // for debug, TODO prevent name collision
+        // for debug, TODO: attach to a dev injection space, prevent name collision
+        if (this.app) {
+          this.app.stores[key] = store
+        }
       }
       // dispose stores
       this.subscriptions.add(() => {
@@ -77,11 +79,8 @@ function view(component: ReactClass<{}>, providedStores: ?Object = null, module?
       if (typeof this[key] !== 'undefined') {
         throw new Error(`Can't defined ${key} onto class ${this.name}, already defined to ${this[key]}`)
       }
-
       injections[key] = val
-      Object.defineProperty(this, key, {
-        get: () => injections[key]
-      })
+      Object.defineProperty(this, key, { get: () => injections[key] })
     }
 
     // render gets params
@@ -90,12 +89,12 @@ function view(component: ReactClass<{}>, providedStores: ?Object = null, module?
     }
   }
 
-  // set static properties
+  // proxy static properties
   Object.keys(component).forEach(staticProp => {
     ProxyComponent[staticProp] = component[staticProp]
   })
 
-  // class helpers
+  // inherit class helpers
   classHelpers(
     ProxyComponent,
     'ref',
@@ -105,25 +104,20 @@ function view(component: ReactClass<{}>, providedStores: ?Object = null, module?
     'createCompositeDisposable'
   )
 
-  // mobx class helpers
+  // inherit mobx class helpers
   mobxClassHelpers(
     ProxyComponent,
     'react',
     'watch'
   )
 
-  // inherent properties
+  // inherit classes
   Object.setPrototypeOf(component.prototype, React.Component.prototype)
   Object.setPrototypeOf(ProxyComponent.prototype, component.prototype)
 
-  // wrap styled + observer
-  // be sure to keep styled outside observer
-  const decoratedComp = plain ?
-    styled(ProxyComponent) :
-    styled(observer(ProxyComponent))
-
+  // add name
   if (browser.name !== 'safari') {
-    Object.defineProperty(decoratedComp, 'name', {
+    Object.defineProperty(ProxyComponent, 'name', {
       value: component.name,
     })
   }
@@ -132,7 +126,9 @@ function view(component: ReactClass<{}>, providedStores: ?Object = null, module?
     developmentDecorate(ProxyComponent)
   }
 
-  return decoratedComp
+  return plain ?
+    styled(ProxyComponent) :
+    styled(observer(ProxyComponent))
 }
 
 view.provide = provided => module => component => view(component, provided, module)
