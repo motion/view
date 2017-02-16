@@ -1,6 +1,5 @@
 {
-  "name": "macro-view-test",
-  "private": true,
+  "name": "motion-view",
   "version": "1.0.0",
   "author": "Team Macro",
   "main": "lib/index.js",
