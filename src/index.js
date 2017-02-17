@@ -1,3 +1,5 @@
+export { addStoreHMR } from './addons'
+
 function assertUndefined(parent, key) {
   if (typeof parent[key] !== 'undefined') {
     throw new Error(`Error, cannot overwrite existing property on class: ${key}`)
@@ -8,22 +10,13 @@ function assertUndefined(parent, key) {
 export default function instantiate(cb) {
   const injections = {}
 
+  // @view
   function view(Klass) {
     return cb ? cb(Klass) : Klass
   }
 
-  // dead-simple dependency injection
-  view.inject = (injectables: Object) => {
-    for (const key of Object.keys(injectables)) {
-      if (typeof injections[key] !== 'undefined' && !(module && module.hot)) {
-        throw new Error(`Already injected ${key} into app`)
-      }
-      injections[key] = injectables[key]
-    }
-    return view
-  }
-
-  function getProvides(parent, provides) {
+  // collect injections + objects for provide
+  function getProvides(parent: Class<T>, provides: Array<Object | string>): Object {
     const result = {}
     for (const key of provides) {
       // attach injection
@@ -34,35 +27,52 @@ export default function instantiate(cb) {
         assertUndefined(parent, key)
         result[key] = injections[key]
       }
-      const provide = provides[key]
-      // attach object
-      if (provide instanceof Object) {
-        for (const subKey of Object.keys(provide)) {
-          assertUndefined(parent, subKey)
-          result[subKey] = provide[subKey]
+      else {
+        // attach object
+        const provide = key
+        if (provide instanceof Object) {
+          for (const subKey of Object.keys(provide)) {
+            assertUndefined(parent, subKey)
+            result[subKey] = provide[subKey]
+          }
         }
       }
     }
     return result
   }
 
-  // attach object to class
-  const attachProvides = (Klass, provisions) => {
+  // attach objects to class
+  function attachObjects(Klass, provisions: Array<Object>) {
     const provides = getProvides(Klass, provisions)
     Object.keys(provides).forEach(key => {
       Object.defineProperty(Klass.prototype, key, {
         get: function() { return provides[key] }
       })
     })
-    return view(Klass)
+    Object.defineProperty(Klass.prototype, '__view_provides__', {
+      get: function() { return provides }
+    })
+    return Klass
   }
 
+  // simple dependency set
+  view.inject = (injectables: Object) => {
+    for (const key of Object.keys(injectables)) {
+      if (typeof injections[key] !== 'undefined' && !(module && module.hot)) {
+        throw new Error(`Already injected ${key} into app`)
+      }
+      injections[key] = injectables[key]
+    }
+    return view
+  }
+
+  // simple dependency get
   view.provide = (...list) => moduleOrComponent => {
     const isReactClass = typeof moduleOrComponent === 'function'
     return isReactClass
       ? view(moduleOrComponent)
       // nest one more layer if we have motion-hmr transform
-      : Klass => attachProvides(Klass, list)
+      : Klass => view(attachObjects(Klass, list))
   }
 
   return view
