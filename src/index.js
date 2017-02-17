@@ -4,6 +4,8 @@ function assertUndefined(parent, key) {
   }
 }
 
+export const PROVIDED_KEY = '__provided__'
+
 // simple view decorator
 export default function instantiate(cb) {
   const injections = {}
@@ -15,7 +17,10 @@ export default function instantiate(cb) {
 
   // collect injections + objects for provide
   function getProvides(parent: Class<T>, provides: Array<Object | string>): Object {
-    const result = {}
+    const result = {
+      injections: {},
+      provides: {}
+    }
     for (const key of provides) {
       // attach injection
       if (typeof key === 'string') {
@@ -23,7 +28,7 @@ export default function instantiate(cb) {
           throw new Error(`Attempting to provide ${key} without first injecting, try @view.inject()`)
         }
         assertUndefined(parent, key)
-        result[key] = injections[key]
+        result.injections[key] = injections[key]
       }
       else {
         // attach object
@@ -31,7 +36,7 @@ export default function instantiate(cb) {
         if (provide instanceof Object) {
           for (const subKey of Object.keys(provide)) {
             assertUndefined(parent, subKey)
-            result[subKey] = provide[subKey]
+            result.provides[subKey] = provide[subKey]
           }
         }
       }
@@ -41,13 +46,13 @@ export default function instantiate(cb) {
 
   // attach objects to class
   function attachObjects(Klass, provisions: Array<Object>) {
-    const provides = getProvides(Klass, provisions)
-    Object.keys(provides).forEach(key => {
+    const { injections, provides } = getProvides(Klass, provisions)
+    Object.keys(injections).forEach(key => {
       Object.defineProperty(Klass.prototype, key, {
-        get: function() { return provides[key] }
+        get: function() { return injections[key] }
       })
     })
-    Object.defineProperty(Klass.prototype, '__view_provides__', {
+    Object.defineProperty(Klass.prototype, PROVIDED_KEY, {
       get: function() { return provides }
     })
     return Klass
