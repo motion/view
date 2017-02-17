@@ -12,17 +12,6 @@
       "steelbrain"
     ]
   },
-  "dependencies": {
-    "detect-browser": "1.5.0",
-    "gloss": "^5.0.0",
-    "lodash": "4.16.4",
-    "macro-class-helpers": "*",
-    "macro-theme": "*",
-    "mobx": "^3.0.0",
-    "mobx-class-helpers": "*",
-    "mobx-persist": "^0.2.0",
-    "mobx-react": "^4.1.0"
-  },
   "devDependencies": {
     "babel-cli": "^6.22.2",
     "babel-preset-steelbrain": "^4.0.2"
