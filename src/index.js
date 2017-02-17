@@ -5,14 +5,19 @@ function assertUndefined(parent, key) {
 }
 
 export const PROVIDED_KEY = '__provided__'
+const DEV_MODE = process.env.NODE_ENV === 'development'
 
 // simple view decorator
-export default function instantiate(cb) {
+export default function createViewDecorator(wrap: Function) {
   const injections = {}
 
   // @view
-  function view(Klass) {
-    return cb ? cb(Klass) : Klass
+  function view(Component) {
+    // let user customize
+    const DecoratedComponent = wrap ? wrap(Component) : Component
+    // add injections
+    Object.defineProperties(DecoratedComponent.prototype, injections)
+    return DecoratedComponent
   }
 
   // collect injections + objects for provide
@@ -58,13 +63,15 @@ export default function instantiate(cb) {
     return Klass
   }
 
-  // simple dependency set
+  // attach objects to every class
   view.inject = (injectables: Object) => {
     for (const key of Object.keys(injectables)) {
       if (typeof injections[key] !== 'undefined' && !(module && module.hot)) {
         throw new Error(`Already injected ${key} into app`)
       }
-      injections[key] = injectables[key]
+      injections[key] = {
+        get: () => injectables[key],
+      }
     }
     return view
   }
@@ -72,11 +79,15 @@ export default function instantiate(cb) {
   // simple dependency get
   view.provide = (...list) => moduleOrComponent => {
     const isReactClass = typeof moduleOrComponent === 'function'
-    return isReactClass
-      ? view(moduleOrComponent)
-      // nest one more layer if we have motion-hmr transform
-      : Klass => view(attachObjects(Klass, list))
+    if (isReactClass) {
+      return view(moduleOrComponent)
+    }
+    // nest one more fn, via motion-hmr transform
+    return Klass => view(attachObjects(Klass, list))
   }
 
   return view
 }
+
+// export @view by default
+export const view = createViewDecorator()
