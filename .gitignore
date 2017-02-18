@@ -1,3 +1,6 @@
-/node_modules
+node_modules
 lib
+*.log
 .DS_Store
+.vscode
+shrinkwrap.yaml
