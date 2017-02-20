@@ -23,6 +23,7 @@ function attachProvides(Klass, provisions: Array<Object>) {
   Object.defineProperty(Klass.prototype, PROVIDED_KEY, {
     get: function() { return provides }
   })
+  return Klass
 }
 
 const idFn = _ => _
