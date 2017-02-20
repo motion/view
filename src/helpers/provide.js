@@ -18,8 +18,7 @@ function getProvides(parent: Class<T>, provides: Array<Object | string>): Object
 }
 
 // attach objects to class
-function attachProvides(Klass, provisions: Array<Object>) {
-  const provides = getProvides(Klass, provisions)
+function attachProvides(Klass, provides) {
   Object.defineProperty(Klass.prototype, PROVIDED_KEY, {
     get: function() { return provides }
   })
@@ -29,16 +28,22 @@ function attachProvides(Klass, provisions: Array<Object>) {
 const idFn = _ => _
 
 // attach stores to current view
-export default function createProvide(viewDecorator = idFn) {
+export default function createProvide(decorator = idFn, options) {
+  console.log(decorator, options)
   return function provide(...list) {
     // handles our custom hmr transform which adds module
-    return moduleOrComponent => {
-      const isReactClass = typeof moduleOrComponent === 'function'
-      if (isReactClass) {
-        return viewDecorator(moduleOrComponent)
+    return moduleOrKlass => {
+      const res = Klass => {
+        const provides = getProvides(Klass, list)
+        const opts = { provides, ...options }
+        decorator(attachProvides(Klass, provides), opts)
       }
-      // nest one more fn, via motion-hmr transform
-      return Klass => viewDecorator(attachProvides(Klass, list))
+      // without hmr transform
+      if (typeof moduleOrKlass === 'function') {
+        return res(moduleOrKlass)
+      }
+      // with hmr transform
+      return res
     }
   }
 }

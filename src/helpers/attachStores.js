@@ -14,12 +14,12 @@ export default function createHelper(options: Object) {
     const key = storeKey ? `${component.name}${storeKey}` : null
 
     // attach stores
-    self.stores = Cache.restore(self, provided, module, options)
+    const stores = Cache.restore(self, provided, module, options)
 
-    for (const { key, store } of self.stores) {
+    for (const { key, store } of stores) {
       // attach store directly to instance
       if (self[key]) {
-        // throw new Error(`Cannot set store to ${key}, component already has that defined: ${self[key]}`)
+        throw new Error(`Cannot set store to ${key}, component already has that defined: ${self[key]}`)
         continue
       }
       if (store.constructor) {
@@ -30,16 +30,17 @@ export default function createHelper(options: Object) {
         self[key] = store
       }
       // for debug, TODO: attach to a dev injection space, prevent name collision
-      if (self.app) {
+      if (self.app && self.app.stores) {
         self.app.stores[key] = store
       }
     }
+    // create subscriptions if not exists
     if (!self.subscriptions) {
       self.subscriptions = new CompositeDisposable()
     }
     // add dispose subscription
     self.subscriptions.add(() => {
-      self.stores.forEach(({ store }) => {
+      stores.forEach(({ store }) => {
         if (store.dispose) {
           store.dispose()
         }
@@ -48,6 +49,7 @@ export default function createHelper(options: Object) {
   }
 
   return {
+    Cache,
     componentWillMount() {
       if (this[PROVIDED_KEY]) {
         attachStores(this, this[PROVIDED_KEY])
