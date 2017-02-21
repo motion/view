@@ -4,36 +4,14 @@ export default class StoreCache {
   constructor() {
     this.cache = {}
   }
-  update(module, provided) {
-    this.cache[module.id] = this.getCached(module, provided)
+  revive(module, provides) {
+    this.cache[module.id] = this.getCached(module, provides)
   }
-  restore(...args) {
-    return this.getStores(...args)
-  }
-
-  // private
-
-  getCached(module, provided): Object<string, Store> {
-    const { stores } = module.hot.data
-    let result = {}
-    if (stores) {
-      const storeNames = Object.keys(stores)
-      for (const key of storeNames) {
-        const store = stores[key]
-        if (provided[key].HMR_ID === store.HMR_ID) {
-          result[key] = store
-        }
-      }
-    }
-    return result
-  }
-
-  getStores(instance, provided, module) {
+  fetch(instance, provided, module) {
     const storeNames = Object.keys(provided)
     let previous = {}
     if (module && module.hot) {
-      previous = this.getPrevious(instance, module)
-      this.saveProvided(instance, storeNames, module)
+      previous = this.getPrevious(instance)
     }
     return storeNames.map(key => {
       const store = previous[key] || provided[key]
@@ -41,7 +19,24 @@ export default class StoreCache {
     })
   }
 
-  getPrevious(instance, module) {
+  // private
+
+  getCached(module, provides): Object<string, Store> {
+    const { stores } = module.hot.data
+    let result = {}
+    if (stores) {
+      const storeNames = Object.keys(stores)
+      for (const key of storeNames) {
+        const store = stores[key]
+        // if (provides[key].HMR_ID === store.HMR_ID) {
+          result[key] = store
+        // }
+      }
+    }
+    return result
+  }
+
+  getPrevious(instance) {
     const result = {}
     if (!module || !module.hot) {
       return result
@@ -59,20 +54,23 @@ export default class StoreCache {
     return result
   }
 
-  saveProvided(instance, storeNames, module) {
-    module.hot.dispose(data => {
-      data.stores = {}
-      for (const name of storeNames) {
-        const store = instance[name]
-        // allow restore of storeKey'ed stores
-        if (instance.props.storeKey) {
-          data.stores[name] = data.stores[name] || { _isKeyed_: true }
-          data.stores[name][instance.props.storeKey] = store
+  createDisposer(onDispose, provides) {
+    return () => {
+      onDispose(data => {
+        debugger
+        data.stores = {}
+        for (const name of Object.keys(provides)) {
+          const store = this[name]
+          // allow restore of storeKey'ed stores
+          if (this.props.storeKey) {
+            data.stores[name] = data.stores[name] || { _isKeyed_: true }
+            data.stores[name][this.props.storeKey] = store
+          }
+          else {
+            data.stores[name] = store
+          }
         }
-        else {
-          data.stores[name] = store
-        }
-      }
-    })
+      })
+    }
   }
 }
