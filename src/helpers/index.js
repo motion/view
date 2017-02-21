@@ -5,8 +5,8 @@ export function assertUndefined(parent, key) {
 }
 
 export function once(fn) {
-  if (fn.called) return _ => _
-  fn.called = true
+  if (fn.__hasBeenCalled) return _ => _
+  fn.__hasBeenCalled = true
   return fn
 }
 

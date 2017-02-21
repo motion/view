@@ -1,3 +1,5 @@
+import { HMR_KEY } from '../constants'
+
 const idFn = _ => _
 
 export default class StoreCache {
@@ -11,7 +13,7 @@ export default class StoreCache {
     const storeNames = Object.keys(provided)
     let previous = {}
     if (module && module.hot) {
-      previous = this.getPrevious(instance)
+      previous = this.getPrevious(instance, module)
     }
     return storeNames.map(key => {
       const store = previous[key] || provided[key]
@@ -36,7 +38,7 @@ export default class StoreCache {
     return result
   }
 
-  getPrevious(instance) {
+  getPrevious(instance, module) {
     const result = {}
     if (!module || !module.hot) {
       return result
@@ -55,12 +57,13 @@ export default class StoreCache {
   }
 
   createDisposer(onDispose, provides) {
-    return () => {
+    return function disposer() {
       onDispose(data => {
-        debugger
         data.stores = {}
         for (const name of Object.keys(provides)) {
           const store = this[name]
+          if (!store) continue
+          store[HMR_KEY] = true
           // allow restore of storeKey'ed stores
           if (this.props.storeKey) {
             data.stores[name] = data.stores[name] || { _isKeyed_: true }

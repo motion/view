@@ -11,13 +11,17 @@ const defaultOptions = {
 
 export default function motionView(options = defaultOptions) {
   const Cache = new StoreCache()
-  let cachePersist
+  const cachePersist = function() { persist.call(this) }
+  let persist = _ => _
+
+  let pmodule
 
   if (module && module.hot) {
-    const onDispose = module.hot.dispose.bind(module.hot)
-    options.onProvide = once((instance, provides) => {
-      Cache.revive(module, provides)
-      cachePersist = Cache.createDisposer(onDispose, provides)
+    options.onProvide = once((Klass, provides, module) => {
+      pmodule = module
+      Cache.revive(pmodule, provides)
+      const onDispose = pmodule.hot.dispose.bind(pmodule.hot)
+      persist = Cache.createDisposer(onDispose, provides)
     })
   }
 
@@ -25,9 +29,8 @@ export default function motionView(options = defaultOptions) {
     const provided = this[PROVIDED_KEY]
     if (provided) {
       // attach stores
-      console.log('fetch', this)
-      const stores = Cache.fetch(this, provided, module)
-      attachStores.call(this, stores, options, module)
+      const stores = Cache.fetch(this, provided, pmodule)
+      attachStores.call(this, stores, options, pmodule)
     }
   }
 
