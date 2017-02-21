@@ -48,6 +48,7 @@ export default function motionView(options = defaultOptions) {
   return {
     decorator,
     componentWillMount,
+    cachePersist,
     provide,
     inject,
     Cache,
