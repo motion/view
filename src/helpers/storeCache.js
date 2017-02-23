@@ -24,6 +24,7 @@ export default class StoreCache {
   // private
 
   getCached(module, provides): Object<string, Store> {
+    console.log('getting data', module.hot.data)
     const { stores } = module.hot.data
     let result = {}
     if (stores) {
@@ -59,10 +60,13 @@ export default class StoreCache {
   createDisposer(onDispose, provides) {
     return function disposer() {
       onDispose(data => {
-        data.stores = {}
-        for (const name of Object.keys(provides)) {
+        data.stores = data.stores || {}
+        const names = Object.keys(provides)
+        for (const name of names) {
           const store = this[name]
-          if (!store) continue
+          if (!store) {
+            continue
+          }
           store[HMR_KEY] = true
           // allow restore of storeKey'ed stores
           if (this.props.storeKey) {

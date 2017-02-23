@@ -3,20 +3,27 @@ import { assertUndefined } from './index'
 const idFn = _ => _
 
 // simple class injector
-export default function createInject(viewDecorator = idFn) {
+export default function createInject() {
   const injections = {}
 
-  return function inject(injection: Object) {
+  function inject(injection: Object) {
     // add
     Object.keys(injection).forEach(k => {
       // TODO hmr complains
       // assertUndefined(injections, k)
       injections[k] = { get: () => injection[k] }
     })
+    return true
+  }
 
-    return Klass => {
-      Object.defineProperties(Klass.prototype, injections)
-      return viewDecorator(Klass)
-    }
+  function injectDecorate(Klass) {
+    Object.defineProperties(Klass.prototype, injections)
+    return Klass
+  }
+
+  return {
+    injections,
+    inject,
+    injectDecorate,
   }
 }
