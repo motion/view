@@ -12,11 +12,11 @@ export function once(fn) {
 
 export function patch(View, name, ...methods) {
   const original = View.prototype[name]
-  View.prototype[name] = function(...args) {
+  View.prototype[name] = function() {
     for (const method of methods) {
       if (!method) continue
-      method.apply(this, args)
+      method.apply(this, arguments)
     }
-    original && original.apply(this, args)
+    return original && original.apply(this, arguments)
   }
 }

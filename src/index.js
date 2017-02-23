@@ -9,7 +9,7 @@ const defaultOptions = {
   onStoreCreate: _ => _,
 }
 
-export default function motionView(options = defaultOptions) {
+export default function motionView(fn, options = defaultOptions) {
   const Cache = new StoreCache()
   const cachePersist = function() { persist.call(this) }
   let persist = _ => _
@@ -35,22 +35,13 @@ export default function motionView(options = defaultOptions) {
   }
 
   // helper to automate some boilerplate
-  function decorator(fn) {
-    function view(View) {
+  function view(View) {
+    if (typeof View === 'function') {
       patch(View, 'componentWillMount', componentWillMount, cachePersist)
-      return fn(View)
     }
-    view.provide = provide(view, options)
-    view.inject = inject(view, options)
-    return view
+    return fn(View)
   }
-
-  return {
-    decorator,
-    componentWillMount,
-    cachePersist,
-    provide,
-    inject,
-    Cache,
-  }
+  view.provide = provide(view, options)
+  view.inject = inject(view, options)
+  return view
 }
