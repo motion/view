@@ -4,7 +4,7 @@ const componentSymbol = Symbol('motion unique component')
 
 let uid = 0
 
-export default function({ types: t }: { types: Object }): Object {
+function transform({ types: t }: { types: Object }): Object {
   return {
     name: 'motion-view-hmr',
     visitor: {
@@ -16,7 +16,6 @@ export default function({ types: t }: { types: Object }): Object {
             return
           }
           node[componentSymbol] = true
-          console.log(path.node)
           path.replaceWith(
             t.callExpression(
               path.node,
@@ -39,3 +38,5 @@ export default function({ types: t }: { types: Object }): Object {
     },
   }
 }
+
+module.exports = transform
