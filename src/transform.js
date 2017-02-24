@@ -16,12 +16,7 @@ function transform({ types: t }: { types: Object }): Object {
             return
           }
           node[componentSymbol] = true
-          path.replaceWith(
-            t.callExpression(
-              path.node,
-              [t.identifier('module')]
-            )
-          )
+          node.arguments.push(t.identifier('module'))
         }
         else if (node.callee.name === 'store' && node.arguments.length === 1) {
           const firstArgument = node.arguments[0]
