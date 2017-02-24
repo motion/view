@@ -1,1 +1,1 @@
-module.exports = require('./lib/transform').default
+module.exports = require('./lib/transform')
