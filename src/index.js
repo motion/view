@@ -1,15 +1,28 @@
 import Cache from './cache'
 import { CompositeDisposable } from 'sb-event-kit'
 import { HMR_KEY } from './constants'
-import { once } from './helpers'
+import { once, assertUndefined } from './helpers'
 
-const Provides = new Cache()
+const cache = new Cache()
+const injections = {}
+
+export function inject(things: Object) {
+  for (const key of Object.keys(things)) {
+    assertUndefined(injections, key)
+    injections[key] = { get: () => things[key] }
+  }
+}
+
+export function injectDecorate(Klass) {
+  Object.defineProperties(Klass.prototype, injections)
+  return Klass
+}
 
 export function provide(things) {
   const keys = Object.keys(things)
 
-  return (Klass, moodule) => {
-    Provides.revive(moodule, things)
+  return (Klass) => extModule => {
+    cache.revive(extModule, things)
 
     class Provider extends React.Element {
       state = {
@@ -18,11 +31,11 @@ export function provide(things) {
 
       componentWillMount() {
         this.setState({
-          stores: Provides.restore(this, things, moodule)
+          stores: cache.restore(this, things, extModule)
         })
 
-        if (moodule && moodule.hot) {
-          moodule.hot.dispose(data => {
+        if (extModule && extModule.hot) {
+          extModule.hot.dispose(data => {
             data.stores = this.state.stores
           })
         }

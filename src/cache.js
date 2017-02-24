@@ -1,4 +1,4 @@
-import { HMR_KEY } from '../constants'
+import { HMR_KEY } from './constants'
 
 const idFn = _ => _
 
