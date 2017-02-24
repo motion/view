@@ -20,8 +20,7 @@ export function injectDecorate(Klass) {
 
 export function provide(things) {
   const keys = Object.keys(things)
-
-  return (Klass) => extModule => {
+  return (Klass: Class, extModule) => {
     cache.revive(extModule, things)
 
     class Provider extends React.Element {
