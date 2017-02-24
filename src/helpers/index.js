@@ -9,14 +9,3 @@ export function once(fn) {
   fn.__hasBeenCalled = true
   return fn
 }
-
-export function patch(View, name, ...methods) {
-  const original = View.prototype[name]
-  View.prototype[name] = function() {
-    for (const method of methods) {
-      if (!method) continue
-      method.apply(this, arguments)
-    }
-    return original && original.apply(this, arguments)
-  }
-}

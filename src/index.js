@@ -1,55 +1,43 @@
-import StoreCache from './helpers/storeCache'
-import attachStores from './helpers/attachStores'
-import createProvide from './helpers/provide'
-import createInject from './helpers/inject'
-import { PROVIDED_KEY } from './constants'
-import { patch, once } from './helpers'
+import Cache from './cache'
+import { CompositeDisposable } from 'sb-event-kit'
+import { HMR_KEY } from './constants'
+import { once } from './helpers'
 
-const defaultOptions = {
-  onStoreCreate: _ => _,
-}
+const Provides = new Cache()
 
-export default function motionView(userDecorator: Function, options = defaultOptions) {
-  const Cache = new StoreCache()
-  const cachePersist = function() { persist.call(this) }
-  let persist = _ => _
+export function provide(things) {
+  const keys = Object.keys(things)
 
-  let currentModule
+  return (Klass, moodule) => {
+    Provides.revive(moodule, things)
 
-  if (module && module.hot) {
-    options.onProvide = once((Klass, provides, module) => {
-      currentModule = module
-      Cache.revive(currentModule, provides)
-      const onDispose = currentModule.hot.dispose.bind(currentModule.hot)
-      persist = Cache.createDisposer(onDispose, provides)
-    })
-  }
+    class Provider extends React.Element {
+      state = {
+        stores: keys.reduce((rest, key) => ({ [key]: null, ...rest }), {})
+      }
 
-  function componentWillMount() {
-    const provided = this[PROVIDED_KEY]
-    if (provided) {
-      // attach stores
-      const stores = Cache.fetch(this, provided, currentModule)
-      attachStores.call(this, stores, options, currentModule)
+      componentWillMount() {
+        this.setState({
+          stores: Provides.restore(this, things, moodule)
+        })
+
+        if (moodule && moodule.hot) {
+          moodule.hot.dispose(data => {
+            data.stores = this.state.stores
+          })
+        }
+      }
+
+      componentWillUnmount() {
+        Object.keys(this.state.stores).forEach(key => {
+          this.state.stores[key].dispose()
+        })
+      }
+
+      render() {
+        return <Klass {...this.props} {...this.state.stores} />
+      }
     }
   }
-
-  // inject decorator
-  const { inject, injectDecorate } = createInject()
-
-  // helper to automate some boilerplate
-  function view(View) {
-    if (typeof View === 'function') {
-      patch(View, 'componentWillMount', componentWillMount, cachePersist)
-    }
-    return injectDecorate(userDecorator(View))
-  }
-
-  // add provide
-  view.provide = createProvide(view, options)
-  // add inject
-  view.inject =  inject
-  view.injectDecorate = injectDecorate
-
-  return view
 }
+

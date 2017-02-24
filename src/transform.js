@@ -16,10 +16,11 @@ export default function({ types: t }: { types: Object }): Object {
             return
           }
           node[componentSymbol] = true
+          console.log(path.node)
           path.replaceWith(
             t.callExpression(
               path.node,
-              [t.identifier('module'), t.identifier('__filename'), t.stringLiteral(path.node.callee.object.name)]
+              [t.identifier('module')]
             )
           )
         }

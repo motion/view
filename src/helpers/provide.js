@@ -1,18 +1,7 @@
 import { PROVIDED_KEY, DEV_MODE } from '../constants'
 import { assertUndefined } from './index'
 
-// collect injections + objects for provide
-function getProvides(parent: Class<T>, provides: Object): Object {
-  const result = {}
-  for (const key of Object.keys(provides)) {
-    assertUndefined(parent, key)
-    result[key] = provides[key]
-  }
-  return result
-}
-
-// attach objects to class
-function attachProvides(Klass, provides) {
+function attachToClass(Klass, provides) {
   Object.defineProperty(Klass.prototype, PROVIDED_KEY, {
     get: function() { return provides }
   })
@@ -21,23 +10,22 @@ function attachProvides(Klass, provides) {
 
 const idFn = _ => _
 
-// attach stores to current view
-export default function createProvide(decorator = idFn, options) {
+export default (decorator = idFn, options) => {
   return function provide(provides) {
     // handles our custom hmr transform which adds module fn
     return (maybeModule: Class | Object) => {
-      const res = (Klass, module) => {
+      function finish(Klass, module) {
         if (options.onProvide) {
           options.onProvide(Klass, provides, module)
         }
-        return decorator(attachProvides(Klass, provides), options)
+        return decorator(attachToClass(Klass, provides), options)
       }
       // without hmr transform
       if (typeof maybeModule === 'function') {
-        return res(maybeModule)
+        return finish(maybeModule)
       }
       // with hmr transform
-      return Klass => res(Klass, maybeModule)
+      return Klass => finish(Klass, maybeModule)
     }
   }
 }
