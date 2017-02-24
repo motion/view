@@ -2,7 +2,7 @@ import { HMR_KEY } from '../constants'
 
 const idFn = _ => _
 
-export default class StoreCache {
+export default class Cache {
   constructor() {
     this.cache = {}
   }
