@@ -14,8 +14,12 @@ export default function provide(things, extModule) {
       }
 
       componentWillMount() {
+        const result = typeof things === 'function'
+          ? things(this.props)
+          : things
+
         this.setState({
-          stores: cache.restore(this, things, extModule)
+          stores: cache.restore(this, result, extModule)
         })
 
         if (extModule && extModule.hot) {
@@ -27,7 +31,8 @@ export default function provide(things, extModule) {
 
       componentWillUnmount() {
         Object.keys(this.state.stores).forEach(key => {
-          this.state.stores[key].dispose()
+          const { dispose } = this.state.stores[key]
+          dispose && dispose()
         })
       }
 
