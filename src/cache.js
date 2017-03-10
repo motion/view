@@ -30,10 +30,8 @@ export default class Cache {
       const storeNames = Object.keys(stores)
       for (const key of storeNames) {
         const store = stores[key]
-        console.log('got cached', store, key, current)
-        // if (current[key].HMR_KEY === store.HMR_KEY) {
-          result[key] = store
-        // }
+        console.log('cache.revive', store, key, current)
+        result[key] = store
       }
     }
     return result

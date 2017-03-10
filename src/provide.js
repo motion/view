@@ -5,6 +5,7 @@ const cache = new Cache()
 
 export default function provide(things, extModule) {
   const keys = Object.keys(things)
+
   return Klass => {
     cache.revive(extModule, things)
 
@@ -14,6 +15,7 @@ export default function provide(things, extModule) {
       }
 
       componentWillMount() {
+        // optional function that receives props
         const result = typeof things === 'function'
           ? things(this.props)
           : things
@@ -37,6 +39,7 @@ export default function provide(things, extModule) {
       }
 
       render() {
+        console.log('render')
         return <Klass {...this.props} {...this.state.stores} />
       }
     }
