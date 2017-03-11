@@ -3,9 +3,7 @@ import { HMR_KEY } from './constants'
 const idFn = _ => _
 
 export default class Cache {
-  constructor() {
-    this.cache = {}
-  }
+  cache = {}
 
   revive(module, provides) {
     this.cache[module.id] = this.getCached(module.hot.data, provides)
