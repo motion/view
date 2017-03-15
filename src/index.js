@@ -4,7 +4,7 @@ const injections = {}
 
 export function inject(things: Object) {
   for (const key of Object.keys(things)) {
-    assertUndefined(injections, key)
+    // assertUndefined(injections, key)
     injections[key] = { get: () => things[key] }
   }
 }
