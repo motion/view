@@ -3,26 +3,31 @@ import Cache from './cache'
 
 const cache = new Cache()
 
-export default function provide(things, extModule) {
-  const keys = Object.keys(things)
-
+export default function provide(provided, extModule) {
   return Klass => {
-    cache.revive(extModule, things)
+    cache.revive(extModule, provided)
 
     class Provider extends React.Component {
-      state = {
-        stores: keys.reduce((rest, key) => ({ [key]: null, ...rest }), {})
-      }
+      constructor(props) {
+        super(props)
 
-      componentWillMount() {
-        // optional function that receives props
-        const result = typeof things === 'function'
-          ? things(this.props)
-          : things
+        // either func=>object or object
+        const isFunction = typeof provided === 'function'
+        let stores
 
-        this.setState({
+        // function => object
+        if (isFunction) {
+          stores = provided(this.props)
+        }
+        // classes
+        else {
+          stores = provided
+          debugger
+        }
+
+        this.state = {
           stores: cache.restore(this, result, extModule)
-        })
+        }
 
         if (extModule && extModule.hot) {
           extModule.hot.dispose(data => {
