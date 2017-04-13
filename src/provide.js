@@ -21,12 +21,17 @@ export default function provide(provided, extModule) {
         }
         // classes
         else {
-          stores = provided
-          debugger
+          stores = Object.keys(provided).reduce(
+            (acc, cur) => ({
+              ...acc,
+              [cur]: new provided[cur](this.props)
+            }),
+            {}
+          )
         }
 
         this.state = {
-          stores: cache.restore(this, result, extModule)
+          stores: cache.restore(this, stores, extModule)
         }
 
         if (extModule && extModule.hot) {
@@ -44,7 +49,6 @@ export default function provide(provided, extModule) {
       }
 
       render() {
-        console.log('render')
         return <Klass {...this.props} {...this.state.stores} />
       }
     }
