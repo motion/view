@@ -6,7 +6,9 @@ export default class Cache {
   cache = {}
 
   revive(module, provides) {
-    this.cache[module.id] = this.getCached(module.hot.data, provides)
+    if (module.hot.data) {
+      this.cache[module.id] = this.getCached(module.hot.data, provides)
+    }
   }
 
   restore(instance, provides, module) {
