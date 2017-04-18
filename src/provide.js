@@ -5,7 +5,9 @@ const cache = new Cache()
 
 export default function provide(provided, extModule) {
   return Klass => {
-    cache.revive(extModule, provided)
+    if (extModule) {
+      cache.revive(extModule, provided)
+    }
 
     class Provider extends React.Component {
       constructor(props) {
@@ -18,20 +20,19 @@ export default function provide(provided, extModule) {
         // function => object
         if (isFunction) {
           stores = provided(this.props)
-        }
-        // classes
-        else {
+        } else {
+          // classes
           stores = Object.keys(provided).reduce(
             (acc, cur) => ({
               ...acc,
-              [cur]: new provided[cur](this.props)
+              [cur]: new provided[cur](this.props),
             }),
-            {}
+            {},
           )
         }
 
         this.state = {
-          stores: cache.restore(this, stores, extModule)
+          stores: cache.restore(this, stores, extModule),
         }
 
         if (extModule && extModule.hot) {
@@ -56,4 +57,3 @@ export default function provide(provided, extModule) {
     return Provider
   }
 }
-
