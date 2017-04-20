@@ -23,13 +23,10 @@ export default function provide(provided, extModule) {
         } else {
           // classes
           stores = Object.keys(provided).reduce((acc, cur) => {
-            const store = provided[cur]
-            const functionalStore = typeof store === 'function'
-              ? store(this.props)
-              : store
+            const Store = provided[cur]
             return {
               ...acc,
-              [cur]: new functionalStore(this.props),
+              [cur]: new Store(this.props),
             }
           }, {})
         }
