@@ -1,6 +1,6 @@
 {
   "name": "motion-view",
-  "version": "1.0.14",
+  "version": "1.0.15",
   "author": "Team Macro",
   "main": "lib/index.js",
   "scripts": {
