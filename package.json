@@ -17,6 +17,7 @@
     "babel-preset-steelbrain": "^4.0.2"
   },
   "dependencies": {
+    "mobx": "^3.1.9",
     "react": "^15.4.2"
   }
 }

@@ -1,5 +1,6 @@
 import React from 'react'
 import Cache from './cache'
+import { observable } from 'mobx'
 
 const cache = new Cache()
 
@@ -10,8 +11,12 @@ export default function provide(provided, extModule) {
     }
 
     class Provider extends React.Component {
+      @observable _props = {}
+
       constructor(props) {
         super(props)
+
+        this._props = props
 
         // either func=>object or object
         const isFunction = typeof provided === 'function'
@@ -24,6 +29,14 @@ export default function provide(provided, extModule) {
           // classes
           stores = Object.keys(provided).reduce((acc, cur) => {
             const Store = provided[cur]
+
+            // add props (hacky)
+            if (!Store.prototype.props) {
+              Object.defineProperty(Store.prototype, 'props', {
+                get: () => this._props,
+              })
+            }
+
             return {
               ...acc,
               [cur]: new Store(this.props),
@@ -40,6 +53,10 @@ export default function provide(provided, extModule) {
             data.stores = this.state.stores
           })
         }
+      }
+
+      componentWillReceiveProps(nextProps) {
+        this._props = nextProps
       }
 
       componentWillUnmount() {
