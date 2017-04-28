@@ -70,11 +70,12 @@ export default function provide(provided, extModule) {
           Object.keys(store).forEach(key => {
             const val = store[key]
 
-            // idea: to make current automatic
-            if (val && val.$ && typeof val.current !== 'undefined') {
+            if (val && val.$isQuery) {
               // totally nuts, this make it auto return the current observable
               Object.defineProperty(store, key, {
-                get: () => val.current,
+                get: () => {
+                  return val.current
+                },
               })
             } else if (typeof val !== 'function' && !isObservable(val)) {
               extendShallowObservable(store, { [key]: val })
