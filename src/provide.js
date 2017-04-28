@@ -11,40 +11,37 @@ export default function provide(provided, extModule) {
     }
 
     class Provider extends React.Component {
-      @observable _props = {}
+      @observable.ref _props = this.props
 
-      constructor(props) {
-        super(props)
+      componentWillReceiveProps(nextProps) {
+        this._props = nextProps
+      }
 
-        this._props = props
-
-        // either func=>object or object
-        const isFunction = typeof provided === 'function'
-        let stores
-
-        // function => object
-        if (isFunction) {
-          stores = provided(this.props)
-        } else {
-          // classes
-          stores = Object.keys(provided).reduce((acc, cur) => {
-            const Store = provided[cur]
-
-            // provide observable props
-            if (!Store.prototype.props) {
-              Object.defineProperty(Store.prototype, 'props', {
-                get: () => this._props,
-              })
-            }
-
-            const store = new Store(this.props)
-
-            return {
-              ...acc,
-              [cur]: store,
-            }
-          }, {})
+      componentWillMount() {
+        const getProps = {
+          get: () => this._props,
+          set: () => {},
+          configurable: true,
         }
+
+        // start stores
+        const stores = Object.keys(provided).reduce((acc, cur) => {
+          const Store = provided[cur]
+
+          function ProxyStore(...args) {
+            Object.defineProperty(Store.prototype, 'props', getProps)
+            this.store = new Store(...args)
+            Object.defineProperty(this.store, 'props', getProps)
+            return this.store
+          }
+
+          const store = new ProxyStore(this.props)
+
+          return {
+            ...acc,
+            [cur]: store,
+          }
+        }, {})
 
         this.state = {
           stores: cache.restore(this, stores, extModule),
@@ -55,13 +52,7 @@ export default function provide(provided, extModule) {
             data.stores = this.state.stores
           })
         }
-      }
 
-      componentWillReceiveProps(nextProps) {
-        this._props = nextProps
-      }
-
-      componentWillMount() {
         // start stores
         Object.keys(this.state.stores).forEach(name => {
           const store = this.state.stores[name]
