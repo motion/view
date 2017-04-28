@@ -1,6 +1,6 @@
 import React from 'react'
 import Cache from './cache'
-import { observable } from 'mobx'
+import { observable, extendShallowObservable, isObservable } from 'mobx'
 
 const cache = new Cache()
 
@@ -30,16 +30,18 @@ export default function provide(provided, extModule) {
           stores = Object.keys(provided).reduce((acc, cur) => {
             const Store = provided[cur]
 
-            // add props (hacky)
+            // provide observable props
             if (!Store.prototype.props) {
               Object.defineProperty(Store.prototype, 'props', {
                 get: () => this._props,
               })
             }
 
+            const store = new Store(this.props)
+
             return {
               ...acc,
-              [cur]: new Store(this.props),
+              [cur]: store,
             }
           }, {})
         }
@@ -57,6 +59,32 @@ export default function provide(provided, extModule) {
 
       componentWillReceiveProps(nextProps) {
         this._props = nextProps
+      }
+
+      componentWillMount() {
+        // start stores
+        Object.keys(this.state.stores).forEach(name => {
+          const store = this.state.stores[name]
+
+          // auto observable stuff
+          Object.keys(store).forEach(key => {
+            const val = store[key]
+
+            // idea: to make current automatic
+            if (val && val.$ && typeof val.current !== 'undefined') {
+              // totally nuts, this make it auto return the current observable
+              Object.defineProperty(store, key, {
+                get: () => val.current,
+              })
+            } else if (typeof val !== 'function' && !isObservable(val)) {
+              extendShallowObservable(store, { [key]: val })
+            }
+          })
+
+          if (store.start) {
+            store.start.call(store, this.props)
+          }
+        })
       }
 
       componentWillUnmount() {
