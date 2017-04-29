@@ -78,8 +78,8 @@ export default function createProvide(options) {
 
         componentWillUnmount() {
           if (options.onStoreUnmount) {
-            for (const name of Object.keys(stores)) {
-              options.onStoreUnmount(name, stores[name])
+            for (const name of Object.keys(this.state.stores)) {
+              options.onStoreUnmount(name, this.state.stores[name])
             }
           }
         }
