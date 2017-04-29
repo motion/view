@@ -1,17 +1,5 @@
-import { assertUndefined } from './helpers'
+import createProvide from './provide'
 
-const injections = {}
-
-export function inject(things: Object) {
-  for (const key of Object.keys(things)) {
-    // assertUndefined(injections, key)
-    injections[key] = { get: () => things[key] }
-  }
+export default function createViewDecorator(options = {}) {
+  return createProvide(options)
 }
-
-export function injectDecorate(Klass) {
-  Object.defineProperties(Klass.prototype, injections)
-  return Klass
-}
-
-export { default as provide } from './provide'

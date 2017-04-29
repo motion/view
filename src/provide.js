@@ -1,96 +1,95 @@
 import React from 'react'
 import Cache from './cache'
-import { observable, extendShallowObservable, isObservable } from 'mobx'
+import { observable } from 'mobx'
 
-const cache = new Cache()
+export default function createProvide(options) {
+  console.log('opts', options)
+  const { mobx } = options
+  const cache = new Cache()
 
-export default function provide(provided, extModule) {
-  return Klass => {
-    if (extModule) {
-      cache.revive(extModule, provided)
-    }
-
-    class Provider extends React.Component {
-      @observable.ref _props = this.props
-
-      componentWillReceiveProps(nextProps) {
-        this._props = nextProps
+  return function provide(provided, extModule) {
+    return Klass => {
+      if (extModule) {
+        cache.revive(extModule, provided)
       }
 
-      componentWillMount() {
-        const getProps = {
-          get: () => this._props,
-          set: () => {},
-          configurable: true,
+      if (options.storeDecorator && provided) {
+        for (const key of Object.keys(provided)) {
+          provided[key] = options.storeDecorator(provided[key])
+        }
+      }
+
+      class Provider extends React.Component {
+        componentWillReceiveProps(nextProps) {
+          this._props = nextProps
         }
 
-        // start stores
-        const stores = Object.keys(provided).reduce((acc, cur) => {
-          const Store = provided[cur]
-
-          function ProxyStore(...args) {
-            Object.defineProperty(Store.prototype, 'props', getProps)
-            this.store = new Store(...args)
-            Object.defineProperty(this.store, 'props', getProps)
-            return this.store
+        componentWillMount() {
+          // for reactive props in stores
+          if (mobx) {
+            mobx.extendShallowObservable(this, { _props: this.props })
+          } else {
+            this._props = this.props
           }
 
-          const store = new ProxyStore(this.props)
-
-          return {
-            ...acc,
-            [cur]: store,
+          const getProps = {
+            get: () => this._props,
+            set: () => {},
+            configurable: true,
           }
-        }, {})
 
-        this.state = {
-          stores: cache.restore(this, stores, extModule),
-        }
+          // start stores
+          let stores = Object.keys(provided).reduce((acc, cur) => {
+            const Store = provided[cur]
 
-        if (extModule && extModule.hot) {
-          extModule.hot.dispose(data => {
-            data.stores = this.state.stores
-          })
-        }
-
-        // start stores
-        Object.keys(this.state.stores).forEach(name => {
-          const store = this.state.stores[name]
-
-          // auto observable stuff
-          Object.keys(store).forEach(key => {
-            const val = store[key]
-
-            if (val && val.$isQuery) {
-              // totally nuts, this make it auto return the current observable
-              Object.defineProperty(store, key, {
-                get: () => {
-                  return val.current
-                },
-              })
-            } else if (typeof val !== 'function' && !isObservable(val)) {
-              extendShallowObservable(store, { [key]: val })
+            function createStore() {
+              Object.defineProperty(Store.prototype, 'props', getProps)
+              const store = new Store()
+              Object.defineProperty(store, 'props', getProps)
+              return store
             }
-          })
 
-          if (store.start) {
-            store.start.call(store, this.props)
+            return {
+              ...acc,
+              [cur]: createStore(),
+            }
+          }, {})
+
+          if (extModule && extModule.hot) {
+            extModule.hot.dispose(data => {
+              data.stores = this.state.stores
+            })
           }
-        })
+
+          // optional mount function
+          if (options.onStoreMount) {
+            for (const name of Object.keys(stores)) {
+              // fallback to store if nothing returned
+              stores[name] =
+                options.onStoreMount(name, stores[name], this.props) ||
+                stores[name]
+            }
+          }
+
+          this.state = {
+            stores: cache.restore(this, stores, extModule),
+          }
+        }
+
+        componentWillUnmount() {
+          if (options.onStoreUnmount) {
+            for (const name of Object.keys(stores)) {
+              options.onStoreUnmount(name, stores[name])
+            }
+          }
+        }
+
+        render() {
+          return <Klass {...this.props} {...this.state.stores} />
+        }
       }
 
-      componentWillUnmount() {
-        Object.keys(this.state.stores).forEach(key => {
-          const { dispose } = this.state.stores[key]
-          dispose && dispose()
-        })
-      }
-
-      render() {
-        return <Klass {...this.props} {...this.state.stores} />
-      }
+      return Provider
     }
-
-    return Provider
   }
 }
